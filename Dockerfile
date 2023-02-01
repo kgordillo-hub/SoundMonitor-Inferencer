@@ -1,6 +1,21 @@
-FROM public.ecr.aws/lambda/python:3.8
-COPY requirements.txt lambda.py ${LAMBDA_TASK_ROOT}
-COPY inferencer ${LAMBDA_TASK_ROOT}/
-COPY data ${LAMBDA_TASK_ROOT}/
-RUN pip3 install -r ${LAMBDA_TASK_ROOT}/requirements.txt
-CMD [ "lambda.handler" ]
+ARG FUNCTION_DIR="/function"
+
+FROM ubuntu:bionic
+
+RUN apt-get update &&\
+    apt -y install libsndfile1 &&\
+    apt install -y software-properties-common &&\
+    apt install -y python3-pip
+
+COPY ./ /${FUNCTION_DIR}/
+
+WORKDIR /${FUNCTION_DIR}/
+
+RUN pip3 install -r ${FUNCTION_DIR}/requirements.txt
+
+EXPOSE 5000
+
+ENTRYPOINT [ "python3" ]
+
+
+CMD [ "app.py" ]
