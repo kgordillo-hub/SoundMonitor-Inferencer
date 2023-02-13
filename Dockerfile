@@ -11,7 +11,7 @@ COPY ./ /${FUNCTION_DIR}/
 
 WORKDIR /${FUNCTION_DIR}/
 
-RUN pip3 install -r ${FUNCTION_DIR}/requirements.txt
+RUN pip3 install -r ${FUNCTION_DIR}/requirements.txt --no-cache-dir
 
 EXPOSE 5000
 
