@@ -2,6 +2,8 @@ ARG FUNCTION_DIR="/function"
 
 FROM python:3.8
 
+RUN pip install --upgrade pip
+
 RUN apt-get update &&\
     apt -y install libsndfile1 &&\
     apt install -y software-properties-common &&\
