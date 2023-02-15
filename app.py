@@ -14,6 +14,7 @@ from inferencer.adapa_task5 import DcaseAdapatask5
 import soundfile as sf
 import io
 import time
+import datetime
 
 
 import flask
@@ -26,13 +27,11 @@ application.debug = application.config["FLASK_DEBUG"] in ["true", "True"]
 
 s3 = boto3.client("s3")
 
-application.logger.setLevel(logging.DEBUG)
 
 @application.route("/identifySound", methods=["POST"])
 def identify_sound():
     
     start_time = time.time()
-    logging.debug('Inferenciador iniciado...')
     
     response = None
     
@@ -55,7 +54,7 @@ def identify_sound():
             
             tmp_prnt = "Descargar el archivo: "+ archivo + " del bucket: " + bucket
             
-            out_file_path='/tmp/'+str(archivo)
+            out_file_path='/tmp/' + str(archivo)
             logging.warn(tmp_prnt)
 
             s3.download_file(Bucket = bucket, Key = archivo, Filename = out_file_path)
@@ -74,32 +73,36 @@ def identify_sound():
             logging.warn("Finaliza el inferenciador")
             
             
-            sns_client = boto3.client("sns", region_name='us-east-1')
+            #sns_client = boto3.client("sns", region_name='us-east-1')
             
             processing_time = (time.time() - start_time)
             
-            service_response = {'ProcessingTime_seconds' : processing_time, 'Inferencer_result' : result_json}
+            service_response = {'ProcessingTime_seconds' : processing_time, 'Date': str(datetime.datetime.now()), 'Inferencer_result' : json.loads(result_json)}
             
-            logging.warn("Service response to send SNS....")
-            logging.warn(service_response)
+            logging.warn("Service response to send SNS: %s" % service_response)
             
-            response = sns_client.publish(
-            TopicArn = "arn:aws:sns:us-east-1:703106094997:audio_result_event",
-            Message = json.dumps({'statusCode': 200, 'body': service_response})
-            )
             
-            logging.warn("Response from SNS")
-            logging.warn(response)
-            #response = Response("", status=200)
+            s3.put_object(
+                Body=(bytes(json.dumps(service_response).encode('UTF-8'))), 
+                Bucket = 'soundmonitor-noise-type', 
+                Key = 'NoiseType_'+str(archivo)+'-'+str(time.time())+'_.json'
+			)
+            response = Response("", status=200)
+            #response = sns_client.publish(
+            #TopicArn = "arn:aws:sns:us-east-1:703106094997:audio_result_event",
+            #Message = json.dumps({'statusCode': 200, 'body': service_response})
+            #)
+            
+            #logging.warn("Response from SNS")
+            #logging.warn(response)
         except Exception as ex:
             sns_client = boto3.client("sns", region_name='us-east-1')
             response = sns_client.publish(
                TopicArn = "arn:aws:sns:us-east-1:703106094997:audio_error_topic",
-               Message = json.dumps({'statusCode': 500, 'error_processing': request.json})
+               Message = json.dumps({'statusCode': 500, 'error_processing': request.json, 'exception': str(ex.args[0])})
             )
             logging.exception("Error processing message: %s" % request.json)
             logging.exception(ex)
-            #response = Response(ex.message, status=500)
     
     return response
 
