@@ -18,8 +18,6 @@ import flask
 from flask import Response, request
 
 application = flask.Flask(__name__)
-application.config.from_object("default_config")
-application.debug = application.config["FLASK_DEBUG"] in ["true", "True"]
 
 s3 = boto3.client("s3")
 
@@ -44,10 +42,7 @@ def identify_sound():
             bucket = message["bucket"]["name"]
             archivo = message["object"]["key"]
 
-            tmp_prnt = "Descargar el archivo: " + archivo + " del bucket: " + bucket
-
             out_file_path = '/tmp/' + str(archivo)
-            logging.warn(tmp_prnt)
 
             s3.download_file(Bucket=bucket, Key=archivo, Filename=out_file_path)
 
@@ -77,17 +72,18 @@ def identify_sound():
             s3.put_object(
                 Body=(bytes(json.dumps(service_response).encode('UTF-8'))),
                 Bucket='soundmonitor-noise-type',
-                Key='NoiseType_' + str(archivo) + '-' + str(time.time()) + '_.json'
+                Key='NoiseType_' + str(archivo) + '_.json'
             )
 
             response = Response("", status=200)
         except Exception as ex:
-            sns_client = boto3.client("sns", region_name='us-east-1')
-            response = sns_client.publish(
-                TopicArn="arn:aws:sns:us-east-1:703106094997:audio_error_topic",
-                Message=json.dumps({'statusCode': 500, 'error_processing': request.json, 'exception': str(ex.args[0])})
+            response = s3.put_object(
+                Body=(bytes(json.dumps({'statusCode': 500, 'error_processing': request.json,
+                                        'exception': str(ex)}).encode('UTF-8'))),
+                Bucket='soundmonitor-error-logs',
+                Key='NoiseType_' + str(archivo) + '_error.json'
             )
-            logging.exception("Error processing message: %s" % request.json)
+            logging.exception("Error processing file: %s" % str(archivo))
             logging.exception(ex)
 
     return response
