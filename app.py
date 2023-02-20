@@ -16,6 +16,7 @@ import time
 
 import flask
 from flask import Response, request
+import os
 
 application = flask.Flask(__name__)
 
@@ -67,7 +68,9 @@ def identify_sound():
                                 'Audio_hora': file_hour,
                                 'Inferencer_result': json.loads(result_json)}
 
-            logging.warn("Service response to send SNS: %s" % service_response)
+            #logging.warn("Service response to save in s3: %s" % service_response)
+            #Removing file
+            os.remove(out_file_path)
 
             s3.put_object(
                 Body=(bytes(json.dumps(service_response).encode('UTF-8'))),
