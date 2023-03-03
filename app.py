@@ -86,7 +86,7 @@ def identify_sound():
                 Bucket='soundmonitor-error-logs',
                 Key='NoiseType_' + str(archivo) + '_error.json'
             )
-            if not out_file_path:
+            if out_file_path:
                 os.remove(out_file_path)
             logging.exception("Error processing file: %s" % str(archivo))
             logging.exception(ex)
