@@ -26,7 +26,7 @@ s3 = boto3.client("s3")
 @application.route("/identifySound", methods=["POST"])
 def identify_sound():
     start_time = time.time()
-
+    out_file_path = ''
     if request.json is None:
         # Expect application/json request
         response = Response("Empty request", status=415)
@@ -86,6 +86,8 @@ def identify_sound():
                 Bucket='soundmonitor-error-logs',
                 Key='NoiseType_' + str(archivo) + '_error.json'
             )
+            if not out_file_path:
+                os.remove(out_file_path)
             logging.exception("Error processing file: %s" % str(archivo))
             logging.exception(ex)
 
